@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Builds
+dist/
+build/
+client/dist/
+coverage/
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Uploads & generated private files
+server/storage/
+uploads/
+tmp/
+
+# Test artifacts
+test-results/
+playwright-report/
+.vitest/
+qa-screenshots/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

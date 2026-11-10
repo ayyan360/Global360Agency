@@ -1,0 +1,35 @@
+{
+  "name": "global360",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Global360 \u2014 full-stack learning platform and internship management system",
+  "type": "module",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,client -c magenta,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:client": "npm run dev -w client",
+    "dev:server": "npm run dev -w server",
+    "build": "npm run build -w client",
+    "start": "npm run start -w server",
+    "db:migrate": "npm run db:migrate -w server --",
+    "db:migrate:undo": "npm run db:migrate:undo -w server --",
+    "db:migrate:status": "npm run db:migrate:status -w server --",
+    "db:seed": "npm run db:seed -w server --",
+    "db:create-admin": "npm run db:create-admin -w server --",
+    "db:setup": "npm run db:migrate && npm run db:seed",
+    "lint": "npm run lint -w server && npm run lint -w client",
+    "test": "npm run test -w server && npm run test -w client",
+    "test:server": "npm run test -w server",
+    "test:client": "npm run test -w client",
+    "jobs:run": "npm run jobs:run -w server --"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}
