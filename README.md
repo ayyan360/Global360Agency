@@ -5,8 +5,8 @@
 Global360 combines a public course website and learning dashboard with a complete three-month internship workflow: applications, Monday–Friday task scheduling, submissions with secure uploads, reviewer assessments, server-side scoring, automatic PDF certificates and public certificate verification.
 
 - **Frontend:** React 19, Vite 8, Tailwind CSS 4, React Router 7, React Hook Form + Zod, Axios, Lucide icons (JavaScript, no TypeScript)
-- **Backend:** Node.js 20+, Express 5, PostgreSQL, Sequelize 6 (migrations via Umzug), Zod validation, JWT in HTTP-only cookies, Helmet, rate limiting, Pino logging
-- **Tests:** Node test runner + Supertest (102 backend tests), Vitest + React Testing Library (20 frontend tests), Playwright smoke script (8 end-to-end UI workflows)
+- **Backend:** Node.js 22.12+ or 24+, Express 5, PostgreSQL, Sequelize 6 (migrations via Umzug), Zod validation, JWT in HTTP-only cookies, Helmet, rate limiting, Pino logging
+- **Tests:** Node test runner + Supertest (108 backend tests), Vitest + React Testing Library (21 frontend tests), Playwright smoke script (8 end-to-end UI workflows)
 
 > See [`docs/CHECKLIST.md`](docs/CHECKLIST.md) for the feature checklist and the honest test report, [`docs/API.md`](docs/API.md) for the REST API, and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for production deployment.
 
@@ -54,7 +54,7 @@ global360/
 
 ## 2. Prerequisites
 
-- **Node.js 20.19+** (developed and tested on Node 22) and npm 10
+- **Node.js 22.12+ or 24+** (developed and tested on Node 22) and npm 10
 - **PostgreSQL 15+** (tested on PostgreSQL 16) — the schema uses `gen_random_uuid()` and `NULLS NOT DISTINCT` unique indexes.
 
 ## 3. Database setup

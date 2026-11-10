@@ -1,6 +1,6 @@
 # Deploying Global360
 
-Global360 is one Node.js API, one static React build, one PostgreSQL database and (for uploads/certificates) one private object-storage bucket. No specific hosting provider is assumed.
+Global360 is one Node.js API, one static React build, one PostgreSQL database and (for uploads/certificates) one private object-storage bucket. Use a currently supported Node.js LTS release (22.12+ or 24+). No specific hosting provider is assumed.
 
 ## 1. Choose a topology
 
@@ -19,7 +19,8 @@ PORT=5000
 CLIENT_URL=https://app.example.com            # exact origin(s), comma-separated
 PUBLIC_APP_URL=https://app.example.com        # used in certificate verification links/QR codes
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/global360
-DATABASE_SSL=true                              # if your provider requires TLS
+DATABASE_SSL=true                              # required in production; certificate validation is enabled
+DATABASE_SSL_CA=                               # optional PEM CA certificate for providers using a private CA
 JWT_SECRET=<48+ random bytes, hex>             # node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 JWT_EXPIRES_IN_HOURS=24
 COOKIE_SECURE=true
@@ -41,6 +42,8 @@ GROQ_MODEL=openai/gpt-oss-120b                  # optional; defaults to this mod
 ```
 
 Store secrets in your platform's secret manager. Never commit them, and never put secrets in `VITE_*` variables (they are compiled into public JavaScript). The learning assistant sends chat messages from signed-in users to Groq to generate replies; omit `GROQ_API_KEY` to leave the assistant disabled.
+
+Production startup now fails closed unless cookies are secure, database TLS is enabled, S3 storage is configured, rate limiting remains enabled, public URLs use HTTPS, and `JWT_SECRET` is a unique non-placeholder value of at least 64 characters. Database TLS validates the server certificate; provide `DATABASE_SSL_CA` when the provider uses a private CA.
 
 ## 3. Build and start
 
@@ -106,7 +109,8 @@ Run once from a secure shell, then remove the variables. Create further staff ac
 - [ ] `TRUST_PROXY` matches your proxy chain
 - [ ] Strong unique `JWT_SECRET`; rotate by deploying a new value (all sessions end)
 - [ ] Private bucket, least-privilege credentials
-- [ ] Database not publicly reachable; TLS enabled
+- [ ] Database not publicly reachable; TLS enabled with certificate verification
+- [ ] Production dependency audit reviewed; no unresolved high/critical advisories
 - [ ] Error logs shipped to your log platform (Pino JSON on stdout; cookies/auth headers are redacted)
 - [ ] Review the Privacy Policy and Terms templates with legal counsel
 - [ ] Configure contact details and social links under Admin → Settings
