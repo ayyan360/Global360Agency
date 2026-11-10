@@ -126,7 +126,7 @@ Submission files are checked against file type, extension, size, and program pol
 
 ## Local development
 
-Prerequisites are Node.js 20.19+ and PostgreSQL 15+. Configure the server and optional client environment files using the examples in each application. Do not commit real environment files or credentials.
+Prerequisites are Node.js 22.12+ or 24+ and PostgreSQL 15+. Configure the server and optional client environment files using the examples in each application. Do not commit real environment files or credentials.
 
 ```bash
 npm install

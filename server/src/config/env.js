@@ -27,6 +27,7 @@ const schema = z.object({
   PUBLIC_APP_URL: z.string().optional(),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   DATABASE_SSL: bool(false),
+  DATABASE_SSL_CA: z.string().optional(),
   DB_LOGGING: bool(false),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN_HOURS: z.coerce.number().positive().default(24),
@@ -56,6 +57,50 @@ const schema = z.object({
   ADMIN_PASSWORD: z.string().optional(),
   EMAIL_PROVIDER: z.enum(['none', 'smtp']).default('none'),
   RATE_LIMIT_DISABLED: bool(false),
+}).superRefine((config, context) => {
+  if (config.NODE_ENV !== 'production') return;
+
+  const requireSetting = (valid, path, message) => {
+    if (!valid) context.addIssue({ code: 'custom', path: [path], message });
+  };
+
+  requireSetting(config.COOKIE_SECURE, 'COOKIE_SECURE', 'must be true in production.');
+  requireSetting(config.DATABASE_SSL, 'DATABASE_SSL', 'must be true in production.');
+  requireSetting(config.STORAGE_DRIVER === 's3', 'STORAGE_DRIVER', 'must be s3 in production so uploads use durable private storage.');
+  requireSetting(!config.RATE_LIMIT_DISABLED, 'RATE_LIMIT_DISABLED', 'must be false in production.');
+  requireSetting(
+    config.JWT_SECRET.length >= 64 && !/replace|change.?me|example/i.test(config.JWT_SECRET),
+    'JWT_SECRET',
+    'must be a non-placeholder secret of at least 64 characters; use a unique value in production.'
+  );
+  for (const key of ['S3_BUCKET', 'S3_REGION', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY']) {
+    requireSetting(Boolean(config[key]?.trim()), key, 'is required when production storage uses S3.');
+  }
+
+  for (const [key, value] of [
+    ['CLIENT_URL', config.CLIENT_URL.split(',').map((origin) => origin.trim())],
+    ['PUBLIC_APP_URL', config.PUBLIC_APP_URL ? [config.PUBLIC_APP_URL] : []],
+  ]) {
+    for (const origin of value) {
+      try {
+        const parsedOrigin = new URL(origin);
+        requireSetting(
+          parsedOrigin.protocol === 'https:' && parsedOrigin.origin === origin,
+          key,
+          'must be an exact HTTPS origin without a path in production.'
+        );
+      } catch {
+        requireSetting(false, key, 'must contain a valid HTTPS origin in production.');
+      }
+    }
+  }
+  if (config.S3_ENDPOINT) {
+    try {
+      requireSetting(new URL(config.S3_ENDPOINT).protocol === 'https:', 'S3_ENDPOINT', 'must use HTTPS in production.');
+    } catch {
+      requireSetting(false, 'S3_ENDPOINT', 'must be a valid HTTPS URL in production.');
+    }
+  }
 });
 
 const parsed = schema.safeParse(process.env);
@@ -72,7 +117,3 @@ export const env = {
   appUrl: parsed.data.PUBLIC_APP_URL || parsed.data.CLIENT_URL.split(',')[0].trim(),
   clientOrigins: parsed.data.CLIENT_URL.split(',').map((s) => s.trim()).filter(Boolean),
 };
-
-if (env.isProd && !env.COOKIE_SECURE) {
-  console.warn('[config] COOKIE_SECURE is false in production. Set COOKIE_SECURE=true when serving over HTTPS.');
-}

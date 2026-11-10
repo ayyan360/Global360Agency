@@ -2,7 +2,7 @@
 
 Status key: ✅ implemented and verified by automated tests and/or the browser E2E run · 🟢 implemented and manually verified (screenshots/API) · ⚙️ implemented, requires external configuration to use · ⛔ not implemented (reason given)
 
-Verification environment: Ubuntu 24.04, Node 22.22, PostgreSQL 16.15, headless Chromium (desktop 1440px, tablet 768px, mobile 390px). Date of report: 18 October 2026.
+Verification environment: Automated tests, lint, production build, and dependency checks run in the current Windows workspace. Date of report: 10 November 2026.
 
 ## 1. Definition-of-done checklist
 
@@ -38,8 +38,8 @@ Verification environment: Ubuntu 24.04, Node 22.22, PostgreSQL 16.15, headless C
 | 28 | Notifications for important events | ✅ | Stored in-app; job deduplication tested |
 | 29 | Secure role and resource authorization | ✅ | `authorization.test.js` (IDOR, escalation, reviewer scope) |
 | 30 | PostgreSQL migrations and seeders | ✅ | Up/down/up verified; idempotent seeding verified |
-| 31 | Automated tests for critical workflows | ✅ | 98 backend + 18 frontend tests passing |
-| 32 | Production build and documented deployment | ✅ | `npm run build` passes; `docs/DEPLOYMENT.md` |
+| 31 | Automated tests for critical workflows | ✅ | 108 backend + 21 frontend tests passing |
+| 32 | Production build and documented deployment | ✅ | `npm run build` passes; `docs/DEPLOYMENT.md`; production environment validation fails closed |
 | 33 | Complete README | ✅ | `README.md` |
 | 34 | Implementation checklist and honest test report | ✅ | This document |
 
@@ -48,9 +48,9 @@ Verification environment: Ubuntu 24.04, Node 22.22, PostgreSQL 16.15, headless C
 ### Backend — `npm run test:server` (Node test runner + Supertest, `global360_test` database)
 
 ```
-# tests 98
-# suites 10
-# pass 98
+# tests 108
+# suites 13
+# pass 108
 # fail 0
 ```
 
@@ -65,12 +65,13 @@ Verification environment: Ubuntu 24.04, Node 22.22, PostgreSQL 16.15, headless C
 | `certificates.test.js` | 12 | Exactly 70% eligible, above 70%, below 70% not qualified, not ended, incomplete tasks, pending assessments, withdrawn, idempotent/concurrent issuance + DB constraint, owner-only download, public fields only, revocation, students/reviewers can't revoke |
 | `authorization.test.js` | 10 | Cross-student IDOR, private notifications, no admin creation/role escalation, self-demotion blocked, sessions revoked on role change, reviewer limits, students can't change thresholds/enrollments/tasks, pagination limits & malformed IDs, health endpoint, no password hashes |
 | `jobs-and-tasks.test.js` | 5 | Working-day task API + exceptions, bulk generation skips & reports non-working days, released-task change reason + audit, deletion blocked with submissions, jobs repeatable without duplicate notifications |
+| `productionConfig.test.js` | 2 | Insecure production configuration rejected; valid HTTPS/S3/database TLS configuration accepted |
 
 ### Frontend — `npm run test:client` (Vitest + React Testing Library)
 
 ```
-Test Files  3 passed (3)
-     Tests  18 passed (18)
+Test Files  4 passed (4)
+     Tests  21 passed (21)
 ```
 
 Covers embed-URL safety, formatters, status labels, accessible inputs/password toggle, progress bars, results summary (separate completion/score/eligibility), eligibility checklist, file-upload pre-checks, course card, pagination, chart data table, login validation and server errors, route guards (anonymous and missing-permission), revoked-certificate verification display.
@@ -97,7 +98,7 @@ Covers embed-URL safety, formatters, status labels, accessible inputs/password t
 
 **Verified locally:** everything in §1 marked ✅/🟢 using local PostgreSQL and the local storage driver.
 
-**Implemented but not exercised against real services (⚙️):**
+**Implemented but not exercised against real production services (⚙️):**
 - **S3-compatible storage driver** (`STORAGE_DRIVER=s3`) — implemented with the AWS SDK (private objects, signed download URLs) but not tested against a real bucket in this environment.
 - **YouTube/Vimeo embeds** — the player converts URLs to privacy-friendly embeds and the CSP allows them, but outbound access to YouTube was blocked in the build environment, so playback itself was not observed. The sample preview lessons reference public freeCodeCamp videos; confirm they still exist or replace the URLs.
 
@@ -112,9 +113,9 @@ Covers embed-URL safety, formatters, status labels, accessible inputs/password t
 - **Accessibility:** semantic landmarks, labels, focus styles, keyboard-operable dialogs and ARIA on progress/charts are in place and partly covered by tests; a full automated (axe) or screen-reader audit has not been run.
 - **Browsers:** visual QA used headless Chromium only; Safari and Firefox were not tested.
 - **Data rights tooling** (self-service account deletion/export) is not implemented; handle requests via support.
-- **Dependency audit:** `npm audit` reports 2 moderate advisories in transitive dependencies (`uuid@8` via Sequelize — only affects callers passing their own buffer, which Sequelize does not; `sprintf-js` via Umzug's unused CLI parser). No fix without breaking upgrades at the time of writing.
+- **Dependency audit (10 November 2026):** the compatible `npm audit fix` removed the high-severity production advisories. Remaining moderate findings are `uuid@8` via Sequelize (the advisory concerns caller-supplied buffers, which this app does not pass) and `minimatch` in the ESLint 10 development toolchain. `npm audit fix --force` proposes breaking major-version changes; do not use it without a deliberate migration.
 - **Legal pages** are templates and must be reviewed before launch.
 
 ## 5. Required external credentials / services for production
 
-PostgreSQL 15+ database · strong `JWT_SECRET` · HTTPS · private S3-compatible bucket and keys (for uploads and stored certificates) · optionally an email provider (requires a small integration) · public site URL for certificate links.
+PostgreSQL 15+ database · unique `JWT_SECRET` (≥64 chars) · HTTPS · TLS-verified PostgreSQL connection · private S3-compatible bucket and keys (for uploads and stored certificates) · public site URL for certificate links.
