@@ -86,6 +86,8 @@ Edit `server/.env`:
 | `COOKIE_SECURE` / `COOKIE_SAMESITE` | `true` / `lax` in production over HTTPS |
 | `GROQ_API_KEY` | Optional Groq API key for the signed-in learning assistant; keep it only in `server/.env` |
 | `GROQ_MODEL` | Groq chat model (defaults to `openai/gpt-oss-120b`) |
+
+The signed-in AI assistant can explain general learning topics and help users navigate Global360. It receives only a validated page category (not page contents or account-specific data) to tailor navigation guidance.
 | Certificate fees | Set per course in the course editor and per internship program in the program editor; set to `0` for free certificates |
 | `STORAGE_DRIVER` | `local` (dev), `s3` (production), or `none` (uploads disabled) |
 | `ENABLE_JOBS` | Run background jobs inside the API process (default `true`) |

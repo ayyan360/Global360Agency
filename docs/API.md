@@ -65,7 +65,7 @@ Password reset by email is **not implemented** because no email provider is conf
 | POST | `/courses/:courseId/wishlist` | Toggle wishlist |
 | GET | `/lessons/:lessonId` | Lesson + outline + navigation. Preview lessons are public; others need enrollment, admin or the course instructor |
 | POST | `/lessons/:lessonId/complete` | `{ completed: boolean }` — idempotent progress record |
-| POST | `/ai-assistant/chat` | Signed-in users only; `{ messages: [{ role: "user"|"assistant", content }] }` (up to 10 messages) → `{ reply }`; rate limited |
+| POST | `/ai-assistant/chat` | Signed-in users only; `{ messages: [{ role: "user"|"assistant", content }], pageContext? }` (up to 10 messages; `pageContext` is a validated page category) → `{ reply }`; rate limited. The assistant explains general topics and Global360 navigation; no live page or private account data is sent. |
 | GET | `/student/dashboard` | Stats, recent courses, recent activity |
 | GET | `/student/courses` | Enrolled courses with progress + continue lesson |
 | GET | `/student/progress` | Overall and per-course progress |
