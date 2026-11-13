@@ -1,0 +1,32 @@
+export function getAssistantPageContext(pathname) {
+  if (pathname === '/student') return 'student_dashboard';
+  if (pathname === '/student/courses') return 'student_courses';
+  if (pathname === '/student/progress') return 'learning_progress';
+  if (pathname.startsWith('/learn/')) return 'lesson_player';
+  if (pathname === '/student/internship') return 'internship_dashboard';
+  if (pathname.startsWith('/student/internship/tasks')) return 'internship_tasks';
+  if (pathname === '/student/internship/progress') return 'internship_progress';
+  if (pathname === '/student/certificates' || pathname === '/student/internship/certificate') return 'certificates';
+  if (pathname === '/student/profile' || pathname === '/account/profile') return 'profile';
+  if (pathname === '/notifications') return 'notifications';
+  if (pathname === '/courses') return 'course_catalog';
+  if (/^\/courses\/[^/]+$/.test(pathname)) return 'course_details';
+  if (pathname === '/internship') return 'internship_catalog';
+  if (pathname.startsWith('/internship/apply/')) return 'internship_application';
+  if (/^\/internship\/[^/]+$/.test(pathname)) return 'internship_details';
+  if (pathname.startsWith('/verify-certificate')) return 'certificate_verification';
+  if (pathname === '/login' || pathname === '/register') return 'sign_in';
+  if (pathname === '/admin') return 'admin_dashboard';
+  if (pathname.startsWith('/admin/courses')) return 'admin_courses';
+  if (pathname === '/admin/modules' || pathname === '/admin/lessons') return 'admin_curriculum';
+  if (pathname.startsWith('/admin/students') || pathname === '/admin/enrollments') return 'admin_learners';
+  if (pathname.startsWith('/admin/internships')) return 'admin_programs';
+  if (pathname.startsWith('/admin/internship-applications')) return 'admin_applications';
+  if (pathname.startsWith('/admin/internship-participants')) return 'admin_participants';
+  if (pathname === '/admin/internship-tasks') return 'admin_tasks';
+  if (pathname.startsWith('/admin/reviews')) return 'admin_reviews';
+  if (pathname === '/admin/certificates') return 'admin_certificates';
+  if (pathname === '/admin/settings') return 'admin_settings';
+  if (pathname.startsWith('/admin/')) return 'admin_area';
+  return 'other';
+}

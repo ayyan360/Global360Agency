@@ -4,8 +4,16 @@ import request from 'supertest';
 import { env } from '../src/config/env.js';
 import { getAssistantReply } from '../src/services/aiAssistantService.js';
 import { createApp } from '../src/app.js';
+import { aiAssistantBody } from '../src/validators/schemas.js';
 
 describe('Learning assistant service', () => {
+  it('accepts only supported page categories and defaults to no page context', () => {
+    const messages = [{ role: 'user', content: 'Explain photosynthesis.' }];
+    assert.equal(aiAssistantBody.parse({ messages }).pageContext, 'other');
+    assert.equal(aiAssistantBody.safeParse({ messages, pageContext: 'student_dashboard' }).success, true);
+    assert.equal(aiAssistantBody.safeParse({ messages, pageContext: 'https://example.com/private' }).success, false);
+  });
+
   it('requires an authenticated session before accepting chat requests', async () => {
     const agent = request.agent(createApp());
     const csrf = await agent.get('/api/auth/csrf');
@@ -29,12 +37,15 @@ describe('Learning assistant service', () => {
       const body = JSON.parse(options.body);
       assert.equal(body.model, 'test-model');
       assert.equal(body.messages[0].role, 'system');
+      assert.match(body.messages[0].content, /any academic or practical topic/);
+      assert.match(body.messages[0].content, /Current page category: course details page/);
+      assert.match(body.messages[0].content, /payment instructions/);
       assert.deepEqual(body.messages[1], { role: 'user', content: 'What does a div do?' });
       return { ok: true, json: async () => ({ choices: [{ message: { content: 'A div groups content.' } }] }) };
     };
 
     try {
-      assert.equal(await getAssistantReply([{ role: 'user', content: 'What does a div do?' }]), 'A div groups content.');
+      assert.equal(await getAssistantReply([{ role: 'user', content: 'What does a div do?' }], 'course_details'), 'A div groups content.');
     } finally {
       env.GROQ_API_KEY = originalKey;
       env.GROQ_MODEL = originalModel;

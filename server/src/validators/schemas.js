@@ -78,6 +78,38 @@ export const aiAssistantBody = z.object({
     )
     .min(1)
     .max(10),
+  pageContext: z.enum([
+    'student_dashboard',
+    'student_courses',
+    'learning_progress',
+    'lesson_player',
+    'internship_dashboard',
+    'internship_tasks',
+    'internship_progress',
+    'certificates',
+    'profile',
+    'notifications',
+    'course_catalog',
+    'course_details',
+    'internship_catalog',
+    'internship_details',
+    'internship_application',
+    'certificate_verification',
+    'sign_in',
+    'admin_dashboard',
+    'admin_courses',
+    'admin_curriculum',
+    'admin_learners',
+    'admin_programs',
+    'admin_applications',
+    'admin_participants',
+    'admin_tasks',
+    'admin_reviews',
+    'admin_certificates',
+    'admin_settings',
+    'admin_area',
+    'other',
+  ]).default('other'),
 });
 
 // ---------- Contact ----------
