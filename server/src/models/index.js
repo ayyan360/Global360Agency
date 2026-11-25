@@ -20,6 +20,7 @@ import {
   InternshipEnrollment,
   InternshipReviewerAssignment,
   InternshipTask,
+  InternshipTaskAttachment,
   TaskSubmission,
   SubmissionAttachment,
   TaskAssessment,
@@ -92,6 +93,8 @@ InternshipReviewerAssignment.belongsTo(InternshipEnrollment, { foreignKey: 'enro
 
 InternshipProgram.hasMany(InternshipTask, { foreignKey: 'programId', as: 'tasks' });
 InternshipTask.belongsTo(InternshipProgram, { foreignKey: 'programId', as: 'program' });
+InternshipTask.hasOne(InternshipTaskAttachment, { foreignKey: 'taskId', as: 'attachment', onDelete: 'CASCADE' });
+InternshipTaskAttachment.belongsTo(InternshipTask, { foreignKey: 'taskId', as: 'task' });
 
 InternshipTask.hasMany(TaskSubmission, { foreignKey: 'taskId', as: 'submissions' });
 TaskSubmission.belongsTo(InternshipTask, { foreignKey: 'taskId', as: 'task' });
@@ -136,6 +139,7 @@ export {
   InternshipEnrollment,
   InternshipReviewerAssignment,
   InternshipTask,
+  InternshipTaskAttachment,
   TaskSubmission,
   SubmissionAttachment,
   TaskAssessment,

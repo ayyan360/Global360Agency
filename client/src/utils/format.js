@@ -69,6 +69,23 @@ export const initials = (name) =>
 export const WEEKDAYS = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export const WEEKDAYS_SHORT = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+export function getYouTubeVideoId(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, '');
+    let id = null;
+    if (host === 'youtu.be') id = url.pathname.split('/')[1];
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      if (url.pathname === '/watch') id = url.searchParams.get('v');
+      else id = url.pathname.match(/^\/(?:embed|shorts)\/([\w-]+)/)?.[1] || null;
+    }
+    return id && /^[\w-]{11}$/.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Converts a YouTube/Vimeo URL into a privacy-friendly embed URL, or null if unsupported. */
 export function toEmbedUrl(url) {
   if (!url) return null;

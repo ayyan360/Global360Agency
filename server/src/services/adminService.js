@@ -21,8 +21,10 @@ import { can } from '../utils/permissions.js';
 import { audit } from './auditService.js';
 import { hashPassword, revokeAllSessions, serializeUser } from './authService.js';
 import { courseProgressFor } from './learningService.js';
+import { firstLessonVideoAttribute } from './courseService.js';
 import { issueCourseCertificate } from './courseCertificateService.js';
 import { notify } from './notificationService.js';
+import { youtubeThumbnailUrl } from '../utils/youtube.js';
 
 // ---------------- Dashboard ----------------
 
@@ -229,13 +231,18 @@ export async function adminListCourses(user, { search, status, category, page = 
         [sequelize.literal(`(SELECT COUNT(*)::int FROM course_modules m WHERE m."courseId" = "Course"."id")`), 'moduleCount'],
         [sequelize.literal(`(SELECT COUNT(*)::int FROM lessons l JOIN course_modules m ON m.id = l."moduleId" WHERE m."courseId" = "Course"."id")`), 'lessonCount'],
         [sequelize.literal(`(SELECT COUNT(*)::int FROM course_enrollments e WHERE e."courseId" = "Course"."id")`), 'enrollmentCount'],
+        firstLessonVideoAttribute(),
       ],
     },
     include: [{ model: User, as: 'instructor', attributes: ['id', 'name'] }],
     order: [['updatedAt', 'DESC']],
     ...toLimitOffset({ page, pageSize }),
   });
-  return { items: rows, meta: pageMeta({ page, pageSize }, count) };
+  const items = rows.map((row) => {
+    const { firstLessonVideoUrl, ...course } = row.get({ plain: true });
+    return { ...course, lessonThumbnailUrl: youtubeThumbnailUrl(firstLessonVideoUrl) };
+  });
+  return { items, meta: pageMeta({ page, pageSize }, count) };
 }
 
 export async function adminGetCourse(user, id) {

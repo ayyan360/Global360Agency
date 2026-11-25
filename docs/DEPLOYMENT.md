@@ -1,6 +1,6 @@
 # Deploying Global360
 
-Global360 is one Node.js API, one static React build, one PostgreSQL database and (for uploads/certificates) one private object-storage bucket. Use a currently supported Node.js LTS release (22.12+ or 24+). No specific hosting provider is assumed.
+Global360 is one Node.js API, one static React build, one PostgreSQL database and private file storage. Use a currently supported Node.js LTS release (22.12+ or 24+). No specific hosting provider is assumed.
 
 ## 1. Choose a topology
 
@@ -15,35 +15,18 @@ Global360 is one Node.js API, one static React build, one PostgreSQL database an
 
 ```
 NODE_ENV=production
-PORT=5000
 CLIENT_URL=https://app.example.com            # exact origin(s), comma-separated
-PUBLIC_APP_URL=https://app.example.com        # used in certificate verification links/QR codes
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/global360
 DATABASE_SSL=true                              # required in production; certificate validation is enabled
-DATABASE_SSL_CA=                               # optional PEM CA certificate for providers using a private CA
 JWT_SECRET=<48+ random bytes, hex>             # node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-JWT_EXPIRES_IN_HOURS=24
 COOKIE_SECURE=true
-COOKIE_SAMESITE=lax                            # 'none' only for topology C
-TRUST_PROXY=1                                  # number of proxies in front (needed for correct client IPs and rate limits)
-STORAGE_DRIVER=s3
-S3_BUCKET=… S3_REGION=… S3_ACCESS_KEY_ID=… S3_SECRET_ACCESS_KEY=…
-S3_ENDPOINT=…                                  # for R2/B2/MinIO/Spaces; omit for AWS
-S3_FORCE_PATH_STYLE=false                      # true for MinIO
-SIGNED_URL_TTL_SECONDS=300
-ENABLE_JOBS=true                               # or false + external scheduler (see §6)
-SERVE_CLIENT=true                              # topology A only
-CERTIFICATE_ISSUER_NAME=Global360 Internship Program
-CERTIFICATE_SIGNATORY_NAME=                    # only with the person's agreement
-CERTIFICATE_SIGNATORY_TITLE=
-LOG_LEVEL=info
-GROQ_API_KEY=<Groq API key>                    # optional; enables the signed-in learning assistant
-GROQ_MODEL=openai/gpt-oss-120b                  # optional; defaults to this model
+STORAGE_DRIVER=local
+LOCAL_STORAGE_DIR=storage/private              # mount persistent storage here
 ```
 
-Store secrets in your platform's secret manager. Never commit them, and never put secrets in `VITE_*` variables (they are compiled into public JavaScript). The learning assistant sends chat messages from signed-in users to Groq to generate replies; omit `GROQ_API_KEY` to leave the assistant disabled.
+For topology A, also set `SERVE_CLIENT=true`. Set `TRUST_PROXY` to the number of trusted reverse-proxy hops when applicable. `PUBLIC_APP_URL` defaults to the first `CLIENT_URL`; `DATABASE_SSL_CA` is only needed for database providers using a private CA. `COOKIE_SAMESITE=none` is only needed for topology C. All other listed defaults can be omitted. Store secrets in your platform's secret manager. Never commit them, and never put secrets in `VITE_*` variables (they are compiled into public JavaScript). The learning assistant sends chat messages from signed-in users to Groq to generate replies; omit `GROQ_API_KEY` to leave the assistant disabled.
 
-Production startup now fails closed unless cookies are secure, database TLS is enabled, S3 storage is configured, rate limiting remains enabled, public URLs use HTTPS, and `JWT_SECRET` is a unique non-placeholder value of at least 64 characters. Database TLS validates the server certificate; provide `DATABASE_SSL_CA` when the provider uses a private CA.
+Production startup now fails closed unless cookies are secure, database TLS is enabled, file storage is enabled, rate limiting remains enabled, public URLs use HTTPS, and `JWT_SECRET` is a unique non-placeholder value of at least 64 characters. With local storage, mount a persistent volume at `server/storage/private` (or configure `LOCAL_STORAGE_DIR`) before starting the API. Database TLS validates the server certificate; provide `DATABASE_SSL_CA` when the provider uses a private CA.
 
 ## 3. Build and start
 
@@ -61,15 +44,15 @@ The server logs a warning on startup if migrations are pending. Health check: `G
 - PostgreSQL **15+** (the schema uses `NULLS NOT DISTINCT`).
 - Run migrations explicitly (`npm run db:migrate`) in a release step; they are never run automatically on boot. Review `npm run db:migrate:status` first. `db:migrate:undo` drops tables — **do not run it against production data** without a backup.
 - Do **not** run `npm run db:seed` in production (it refuses unless `--allow-production`; demo accounts are always refused).
-- **Backups:** enable automated daily snapshots with point-in-time recovery if available; additionally schedule `pg_dump --format=custom` to separate storage, keep ≥ 30 days, and test restores regularly. Back up the object-storage bucket (versioning) alongside the database — attachments and certificate PDFs are referenced by key.
+- **Backups:** enable automated daily snapshots with point-in-time recovery if available; additionally schedule `pg_dump --format=custom` to separate storage, keep ≥ 30 days, and test restores regularly. Back up the persistent upload directory alongside the database — attachments and certificate PDFs are referenced by key.
 
 ## 5. File storage
 
-- Create a **private** bucket (block all public access). The API writes objects without public ACLs and serves downloads with short-lived signed URLs.
-- Grant the API credentials only `PutObject`, `GetObject`, `DeleteObject`, `HeadObject` on that bucket.
+- The default `local` driver stores uploads privately on disk and serves authorized downloads through the API. The disk must persist across deploys and be backed up; ephemeral container filesystems are not suitable.
+- An S3-compatible private bucket is also supported by setting `STORAGE_DRIVER=s3` and its credentials, if you later choose to use object storage.
 - Upload limits are per program (default: PDF/PNG/JPG/WEBP/ZIP, 10 MB each, 5 files), capped by a hard 25 MB/10-file server limit. Files are validated by content signature, never executed, and stored under random keys.
 - If storage is not configured (`STORAGE_DRIVER=none`), uploads return a clear 503 message and certificate PDFs are generated on demand without being stored.
-- Local storage (`STORAGE_DRIVER=local`) is for development or single-server deployments with a persistent, backed-up disk.
+- Local storage (`STORAGE_DRIVER=local`) is suitable for a single-server deployment with a persistent, backed-up disk.
 - Certificate payment receipts use the same private storage driver as other sensitive uploads; do not move them into a publicly served uploads directory.
 
 ### Certificate payments
@@ -77,7 +60,7 @@ The server logs a warning on startup if migrations are pending. Health check: `G
 - Set the course certificate fee on each course and the internship certificate fee on each program. Fees are in PKR; set `0` for a free certificate.
 - Configure the bank name, account holder, and bank account/IBAN under **Admin → Settings**. Verify the destination account before sharing payment instructions; do not use a card number as a bank transfer account.
 - Admins review uploaded receipt images under **Admin → Certificates → Certificate payment receipts**. The server blocks downloads and public verification of paid certificates until an admin approves payment.
-- Receipt uploads accept JPG, PNG, or WEBP images up to 5 MB. Configure private persistent storage (local or S3-compatible) before accepting receipts.
+- Receipt uploads accept JPG, PNG, or WEBP images up to 5 MB. Configure private persistent storage before accepting receipts.
 
 ## 6. Background jobs
 
@@ -92,7 +75,7 @@ With multiple API instances you can keep `ENABLE_JOBS=true` on all of them (the 
 
 ## 7. Email (optional)
 
-Email delivery is not configured (`EMAIL_PROVIDER=none`). All notifications are stored in-app; the platform never claims an email was sent. To add email, implement a provider in `server/src/services/` and call it from `notificationService.notify` using environment-based credentials.
+Email delivery is not configured. All notifications are stored in-app; the platform never claims an email was sent. To add email, implement a provider in `server/src/services/` and call it from `notificationService.notify` using environment-based credentials.
 
 ## 8. Admin bootstrap
 
@@ -108,7 +91,7 @@ Run once from a secure shell, then remove the variables. Create further staff ac
 - [ ] `CLIENT_URL` lists only your real origins
 - [ ] `TRUST_PROXY` matches your proxy chain
 - [ ] Strong unique `JWT_SECRET`; rotate by deploying a new value (all sessions end)
-- [ ] Private bucket, least-privilege credentials
+- [ ] Persistent upload storage is private and included in backups
 - [ ] Database not publicly reachable; TLS enabled with certificate verification
 - [ ] Production dependency audit reviewed; no unresolved high/critical advisories
 - [ ] Error logs shipped to your log platform (Pino JSON on stdout; cookies/auth headers are redacted)

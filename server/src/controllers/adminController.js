@@ -3,6 +3,7 @@ import * as admin from '../services/adminService.js';
 import * as programs from '../services/internship/programService.js';
 import * as applications from '../services/internship/applicationService.js';
 import * as tasks from '../services/internship/taskService.js';
+import * as taskAttachments from '../services/internship/taskAttachmentService.js';
 import * as participants from '../services/internship/participantService.js';
 import * as reviews from '../services/internship/reviewService.js';
 import * as certificates from '../services/internship/certificateService.js';
@@ -111,6 +112,18 @@ export const listTasks = async (req, res) => list(res, await tasks.adminListTask
 export const getTask = async (req, res) => ok(res, await tasks.adminGetTask(req.params.id));
 export const createTask = async (req, res) => created(res, await tasks.createTask(req.user, req.params.id, req.valid.body, ctx(req)));
 export const updateTask = async (req, res) => ok(res, await tasks.updateTask(req.user, req.params.id, req.valid.body, ctx(req)));
+export const uploadTaskPdf = async (req, res) => created(res, await taskAttachments.uploadTaskPdf(req.user, req.params.id, req.file, ctx(req)));
+export async function downloadTaskAttachment(req, res) {
+  const { attachment, signedUrl, stream } = await taskAttachments.getTaskPdfForAdmin(req.params.id);
+  if (signedUrl) return res.redirect(302, signedUrl);
+  res.setHeader('Content-Type', attachment.mimeType);
+  res.setHeader('Content-Length', String(attachment.sizeBytes));
+  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.originalFileName)}"`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+  res.setHeader('Cache-Control', 'private, no-store');
+  stream.pipe(res);
+}
 export const setTaskStatus = async (req, res) => ok(res, await tasks.setTaskStatus(req.user, req.params.id, req.valid.body.status, ctx(req)));
 export async function deleteTask(req, res) {
   await tasks.deleteTask(req.user, req.params.id, ctx(req));

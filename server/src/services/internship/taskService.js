@@ -3,6 +3,7 @@ import {
   sequelize,
   InternshipProgram,
   InternshipTask,
+  InternshipTaskAttachment,
   InternshipEnrollment,
   TaskSubmission,
 } from '../../models/index.js';
@@ -24,6 +25,7 @@ import {
   todayInProgram,
 } from './scheduleService.js';
 import { loadHolidays, participantTaskState } from './scoringService.js';
+import { getStoredTaskPdf, removeStoredTaskPdfs, serializeTaskAttachment } from './taskAttachmentService.js';
 
 const TASK_FIELDS = ['title', 'description', 'instructions', 'requirements', 'acceptanceCriteria', 'skills', 'resources', 'submissionTypes', 'maxMarks', 'isRequired'];
 
@@ -66,6 +68,7 @@ export function serializeTask(task) {
     acceptanceCriteria: t.acceptanceCriteria,
     skills: t.skills,
     resources: t.resources,
+    attachment: serializeTaskAttachment(t.attachment),
     submissionTypes: t.submissionTypes,
     weekNumber: t.weekNumber,
     scheduledDay: t.scheduledDay,
@@ -93,7 +96,10 @@ export async function adminListTasks({ programId, status, week, search, page = 1
     attributes: {
       include: [[sequelize.literal(`(SELECT COUNT(DISTINCT s."enrollmentId")::int FROM task_submissions s WHERE s."taskId" = "InternshipTask"."id")`), 'submissionCount']],
     },
-    include: [{ model: InternshipProgram, as: 'program', attributes: ['id', 'title', 'track', 'timezone'] }],
+    include: [
+      { model: InternshipProgram, as: 'program', attributes: ['id', 'title', 'track', 'timezone'] },
+      { model: InternshipTaskAttachment, as: 'attachment', attributes: ['id', 'originalFileName', 'mimeType', 'sizeBytes', 'createdAt', 'updatedAt'] },
+    ],
     order: [['scheduledDate', 'ASC'], ['availableAt', 'ASC']],
     ...toLimitOffset({ page, pageSize }),
   });
@@ -104,7 +110,12 @@ export async function adminListTasks({ programId, status, week, search, page = 1
 }
 
 export async function adminGetTask(id) {
-  const task = await InternshipTask.findByPk(id, { include: [{ model: InternshipProgram, as: 'program', attributes: ['id', 'title', 'track', 'timezone', 'startDate', 'endDate'] }] });
+  const task = await InternshipTask.findByPk(id, {
+    include: [
+      { model: InternshipProgram, as: 'program', attributes: ['id', 'title', 'track', 'timezone', 'startDate', 'endDate'] },
+      { model: InternshipTaskAttachment, as: 'attachment', attributes: ['id', 'originalFileName', 'mimeType', 'sizeBytes', 'createdAt', 'updatedAt'] },
+    ],
+  });
   if (!task) throw notFound('Task not found.');
   return { ...serializeTask(task), program: task.program };
 }
@@ -214,7 +225,9 @@ export async function deleteTask(admin, id, { ip } = {}) {
   if (!task) throw notFound('Task not found.');
   const submissions = await TaskSubmission.count({ where: { taskId: id } });
   if (submissions > 0) throw conflict('This task has submissions and cannot be deleted. Archive it instead.');
+  const attachments = await InternshipTaskAttachment.findAll({ where: { taskId: id } });
   await task.destroy();
+  await removeStoredTaskPdfs(attachments);
   await audit({ actorId: admin.id, action: 'task.deleted', entityType: 'InternshipTask', entityId: id, metadata: { title: task.title }, ip });
 }
 
@@ -342,7 +355,10 @@ export async function participantWeek(user, weekParam) {
 
 export async function participantTaskDetail(user, taskId) {
   const enrollment = await getParticipantEnrollment(user);
-  const task = await InternshipTask.findOne({ where: { id: taskId, programId: enrollment.programId, status: 'published' } });
+  const task = await InternshipTask.findOne({
+    where: { id: taskId, programId: enrollment.programId, status: 'published' },
+    include: [{ model: InternshipTaskAttachment, as: 'attachment', attributes: ['id', 'originalFileName', 'mimeType', 'sizeBytes', 'createdAt', 'updatedAt'] }],
+  });
   if (!task) throw notFound('Task not found.');
   const program = enrollment.program;
   const policy = programPolicy(program);
@@ -366,6 +382,20 @@ export async function participantTaskDetail(user, taskId) {
     canSubmit,
     cannotSubmitReason: reason,
   };
+}
+
+export async function getParticipantTaskPdf(user, taskId) {
+  const enrollment = await getParticipantEnrollment(user);
+  const task = await InternshipTask.findOne({
+    where: { id: taskId, programId: enrollment.programId, status: 'published' },
+    include: [{ model: InternshipTaskAttachment, as: 'attachment' }],
+  });
+  if (!task) throw notFound('Task PDF not found.');
+  const policy = programPolicy(enrollment.program);
+  if (new Date(task.availableAt) > new Date() && !policy.schedule.allowEarlyAccess) {
+    throw forbidden(`This task will be available on ${task.scheduledDate}.`);
+  }
+  return getStoredTaskPdf(task.attachment);
 }
 
 /**

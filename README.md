@@ -72,7 +72,6 @@ CREATE DATABASE global360_test OWNER global360;
 ```bash
 cp server/.env.example server/.env              # development settings
 cp server/.env.test.example server/.env.test    # test settings (must use the *_test database)
-cp client/.env.example client/.env              # optional; defaults work for local dev
 ```
 
 Edit `server/.env`:
@@ -89,7 +88,7 @@ Edit `server/.env`:
 
 The signed-in AI assistant can explain general learning topics and help users navigate Global360. It receives only a validated page category (not page contents or account-specific data) to tailor navigation guidance.
 | Certificate fees | Set per course in the course editor and per internship program in the program editor; set to `0` for free certificates |
-| `STORAGE_DRIVER` | `local` (dev), `s3` (production), or `none` (uploads disabled) |
+| `STORAGE_DRIVER` | `local` (default), `s3` (optional), or `none` (uploads disabled); production needs persistent storage |
 | `ENABLE_JOBS` | Run background jobs inside the API process (default `true`) |
 | `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Used only by `npm run db:create-admin` |
 
@@ -148,7 +147,7 @@ Production-style single server (API also serves the built SPA):
 
 ```bash
 npm run build                          # builds client/dist
-SERVE_CLIENT=true npm start            # http://localhost:5000
+SERVE_CLIENT=true npm start            # http://localhost:5000; configure production env as in docs/DEPLOYMENT.md
 ```
 
 ## 8. Tests and quality checks
@@ -174,7 +173,7 @@ Optional browser QA (requires `playwright-core` and a Chromium binary): see [`sc
 - **Task completion ≠ performance score ≠ eligibility.** They are computed and displayed separately everywhere.
 - **Scoring:** final score = Σ finalized marks on required tasks ÷ Σ max marks of required tasks × 100, half-up rounded to 2 decimals; unsubmitted required tasks count as zero; optional tasks are excluded; the latest current finalized assessment per task is used. No final score is issued while required submissions await review/revision or before the end date.
 - **Certificates:** issued only after the program end date, when all checks pass. Issuance runs in a transaction with a row lock and a unique `enrollmentId` constraint, so it is idempotent even under concurrent calls. Revocation is a separate, audited admin action.
-- **Uploads:** parsed in memory with hard limits, validated by real file signature (magic bytes) + extension + size against program policy, stored under random keys in private storage, served only to the owner/assigned reviewer/admin as attachments with `nosniff` and a sandbox CSP (or short-lived signed URLs on S3).
+- **Uploads:** parsed in memory with hard limits, validated by real file signature (magic bytes) + extension + size against program policy, stored under random keys in private storage, served only to the owner/assigned reviewer/admin as attachments with `nosniff` and a sandbox CSP (or short-lived signed URLs when using S3).
 - **Audit log:** application decisions, program configuration changes, task schedule changes, assessments and amendments, certificate issuance/revocation, role and account changes.
 - **No invented data:** ratings, counts and statistics are database queries; contact details and social links appear only once an admin enters them; sample content is labelled.
 

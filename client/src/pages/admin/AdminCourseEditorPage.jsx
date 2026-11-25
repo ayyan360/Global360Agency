@@ -67,19 +67,24 @@ function CourseForm({ course, onSaved }) {
       <Textarea label="Full description" required className="md:col-span-2" rows={6} error={errors.description?.message} {...register('description')} />
       <Input label="Category" required placeholder="e.g. Web Development" error={errors.category?.message} {...register('category')} />
       <Select label="Level" error={errors.level?.message} options={[{ value: 'beginner', label: 'Beginner' }, { value: 'intermediate', label: 'Intermediate' }, { value: 'advanced', label: 'Advanced' }]} {...register('level')} />
-      <Select label="Status" error={errors.status?.message} options={[{ value: 'draft', label: 'Draft (hidden)' }, { value: 'published', label: 'Published' }, { value: 'archived', label: 'Archived (hidden)' }]} {...register('status')} />
-      {isAdmin ? (
-        <Select label="Instructor" placeholder="No instructor" options={(instructors || []).map((i) => ({ value: i.id, label: `${i.name} (${i.role})` }))} {...register('instructorId')} />
-      ) : (
-        <Input label="Instructor" value="You" disabled readOnly />
-      )}
-      <Input label="Thumbnail image URL" placeholder="https://… (leave empty for a generated cover)" error={errors.thumbnailUrl?.message} {...register('thumbnailUrl')} />
-      <Input label="URL slug" placeholder="auto-generated from title" hint="Lowercase letters, numbers and hyphens." error={errors.slug?.message} {...register('slug')} />
-      <Input label="Language" error={errors.language?.message} {...register('language')} />
-      <div className="flex items-end"><Checkbox label="Free course" description="Students can enrol without payment." {...register('isFree')} /></div>
-      <Input label="Certificate fee (PKR)" type="number" min={0} step={1} hint="Set to 0 for a free certificate." error={errors.certificateFee?.message} {...register('certificateFee', { valueAsNumber: true })} />
-      <Textarea label="Learning outcomes (one per line)" rows={4} error={errors.outcomes?.message} {...register('outcomes')} />
-      <Textarea label="Requirements (one per line)" rows={4} error={errors.requirements?.message} {...register('requirements')} />
+      <details open={Boolean(course)} className="rounded-xl border border-line md:col-span-2">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Optional settings</summary>
+        <div className="grid gap-4 border-t border-line p-4 md:grid-cols-2">
+          <Select label="Status" error={errors.status?.message} options={[{ value: 'draft', label: 'Draft (hidden)' }, { value: 'published', label: 'Published' }, { value: 'archived', label: 'Archived (hidden)' }]} {...register('status')} />
+          {isAdmin ? (
+            <Select label="Instructor" placeholder="No instructor" options={(instructors || []).map((i) => ({ value: i.id, label: `${i.name} (${i.role})` }))} {...register('instructorId')} />
+          ) : (
+            <Input label="Instructor" value="You" disabled readOnly />
+          )}
+          <Input label="Thumbnail image URL" placeholder="https://… (leave empty for a generated cover)" error={errors.thumbnailUrl?.message} {...register('thumbnailUrl')} />
+          <Input label="URL slug" placeholder="Auto-generated from title" hint="Leave empty to generate automatically." error={errors.slug?.message} {...register('slug')} />
+          <Input label="Language" error={errors.language?.message} {...register('language')} />
+          <div className="flex items-end"><Checkbox label="Free course" description="Students can enrol without payment." {...register('isFree')} /></div>
+          <Input label="Certificate fee (PKR)" type="number" min={0} step={1} hint="Set to 0 for a free certificate." error={errors.certificateFee?.message} {...register('certificateFee', { valueAsNumber: true })} />
+          <Textarea label="Learning outcomes (one per line)" rows={4} error={errors.outcomes?.message} {...register('outcomes')} />
+          <Textarea label="Requirements (one per line)" rows={4} error={errors.requirements?.message} {...register('requirements')} />
+        </div>
+      </details>
       <div className="md:col-span-2"><Button type="submit" loading={isSubmitting}>{course ? 'Save course' : 'Create course'}</Button></div>
     </form>
   );

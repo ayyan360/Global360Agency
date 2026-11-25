@@ -15,3 +15,13 @@ export const submissionUpload = multer({
     parts: HARD_MAX_FILES + 10,
   },
 }).array('files', HARD_MAX_FILES);
+
+export const taskPdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1,
+    fields: 0,
+    parts: 1,
+  },
+}).single('file');

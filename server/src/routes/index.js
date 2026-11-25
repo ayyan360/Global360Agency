@@ -65,6 +65,7 @@ r.post('/student/internship/withdraw', requireAuth, requireRole('student'), vali
 r.get('/student/internship/tasks', requireAuth, validate({ query: S.weekQuery }), student.internshipTasks);
 const taskIdParam = z.object({ taskId: uuid });
 r.get('/student/internship/tasks/:taskId', requireAuth, validate({ params: taskIdParam }), student.internshipTask);
+r.get('/student/internship/tasks/:taskId/attachment', requireAuth, validate({ params: taskIdParam }), student.downloadTaskAttachment);
 r.get('/student/internship/tasks/:taskId/submissions', requireAuth, validate({ params: taskIdParam }), student.taskSubmissions);
 r.post(
   '/student/internship/tasks/:taskId/submissions',

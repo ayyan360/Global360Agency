@@ -37,7 +37,7 @@ export default function AdminCoursesPage() {
             header: 'Course',
             render: (c) => (
               <div className="flex items-center gap-3">
-                <div className="hidden w-16 shrink-0 sm:block"><CourseThumbnail src={c.thumbnailUrl} title={c.title} category={c.category} rounded="rounded-md" /></div>
+                <div className="hidden w-16 shrink-0 sm:block"><CourseThumbnail src={c.thumbnailUrl} lessonThumbnailUrl={c.lessonThumbnailUrl} title={c.title} category={c.category} rounded="rounded-md" /></div>
                 <div className="min-w-0">
                   <Link to={`/admin/courses/${c.id}`} onClick={(e) => e.stopPropagation()} className="font-semibold hover:text-primary">{c.title}</Link>
                   <p className="text-xs text-muted">{c.category} · {LEVEL_LABELS[c.level]} {c.isSample && <Badge tone="outline" className="ml-1">Sample</Badge>}</p>

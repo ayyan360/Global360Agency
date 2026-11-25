@@ -47,10 +47,11 @@ function Motif({ motif, accent, light }) {
   );
 }
 
-export function CourseThumbnail({ src, title, category, className = '', rounded = 'rounded-t-[var(--radius-card)]' }) {
-  const [failed, setFailed] = useState(false);
-  if (src && !failed) {
-    return <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} className={`aspect-[16/10] w-full object-cover ${rounded} ${className}`} />;
+export function CourseThumbnail({ src, lessonThumbnailUrl, title, category, className = '', rounded = 'rounded-t-[var(--radius-card)]' }) {
+  const [failedSource, setFailedSource] = useState(null);
+  const imageSource = [src, lessonThumbnailUrl].find((candidate) => candidate && candidate !== failedSource);
+  if (imageSource) {
+    return <img src={imageSource} alt="" loading="lazy" onError={() => setFailedSource(imageSource)} className={`aspect-[16/10] w-full object-cover ${rounded} ${className}`} />;
   }
   const t = THEMES[category] || DEFAULT;
   const Icon = t.icon;

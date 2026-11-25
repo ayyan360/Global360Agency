@@ -18,7 +18,7 @@ export function CourseCard({ course }) {
   return (
     <article className="card group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-[0_16px_40px_-20px_rgb(108_43_235/0.45)]">
       <div className="relative">
-        <CourseThumbnail src={course.thumbnailUrl} title={course.title} category={course.category} />
+        <CourseThumbnail src={course.thumbnailUrl} lessonThumbnailUrl={course.lessonThumbnailUrl} title={course.title} category={course.category} />
         {course.isSample && <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">Sample</span>}
       </div>
       <div className="flex flex-1 flex-col p-4">

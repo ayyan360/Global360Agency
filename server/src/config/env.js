@@ -55,7 +55,6 @@ const schema = z.object({
   ADMIN_NAME: z.string().optional(),
   ADMIN_EMAIL: z.string().optional(),
   ADMIN_PASSWORD: z.string().optional(),
-  EMAIL_PROVIDER: z.enum(['none', 'smtp']).default('none'),
   RATE_LIMIT_DISABLED: bool(false),
 }).superRefine((config, context) => {
   if (config.NODE_ENV !== 'production') return;
@@ -66,15 +65,17 @@ const schema = z.object({
 
   requireSetting(config.COOKIE_SECURE, 'COOKIE_SECURE', 'must be true in production.');
   requireSetting(config.DATABASE_SSL, 'DATABASE_SSL', 'must be true in production.');
-  requireSetting(config.STORAGE_DRIVER === 's3', 'STORAGE_DRIVER', 'must be s3 in production so uploads use durable private storage.');
+  requireSetting(config.STORAGE_DRIVER !== 'none', 'STORAGE_DRIVER', 'must enable private file storage in production.');
   requireSetting(!config.RATE_LIMIT_DISABLED, 'RATE_LIMIT_DISABLED', 'must be false in production.');
   requireSetting(
     config.JWT_SECRET.length >= 64 && !/replace|change.?me|example/i.test(config.JWT_SECRET),
     'JWT_SECRET',
     'must be a non-placeholder secret of at least 64 characters; use a unique value in production.'
   );
-  for (const key of ['S3_BUCKET', 'S3_REGION', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY']) {
-    requireSetting(Boolean(config[key]?.trim()), key, 'is required when production storage uses S3.');
+  if (config.STORAGE_DRIVER === 's3') {
+    for (const key of ['S3_BUCKET', 'S3_REGION', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY']) {
+      requireSetting(Boolean(config[key]?.trim()), key, 'is required when production storage uses S3.');
+    }
   }
 
   for (const [key, value] of [
@@ -94,7 +95,7 @@ const schema = z.object({
       }
     }
   }
-  if (config.S3_ENDPOINT) {
+  if (config.STORAGE_DRIVER === 's3' && config.S3_ENDPOINT) {
     try {
       requireSetting(new URL(config.S3_ENDPOINT).protocol === 'https:', 'S3_ENDPOINT', 'must use HTTPS in production.');
     } catch {

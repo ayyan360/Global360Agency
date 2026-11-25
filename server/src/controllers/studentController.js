@@ -44,6 +44,17 @@ export const withdrawApplication = async (req, res) => ok(res, await application
 export const internshipDashboard = async (req, res) => ok(res, await participant.participantDashboard(req.user));
 export const internshipTasks = async (req, res) => ok(res, await tasks.participantWeek(req.user, req.valid.query.week));
 export const internshipTask = async (req, res) => ok(res, await tasks.participantTaskDetail(req.user, req.params.taskId));
+export async function downloadTaskAttachment(req, res) {
+  const { attachment, signedUrl, stream } = await tasks.getParticipantTaskPdf(req.user, req.params.taskId);
+  if (signedUrl) return res.redirect(302, signedUrl);
+  res.setHeader('Content-Type', attachment.mimeType);
+  res.setHeader('Content-Length', String(attachment.sizeBytes));
+  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.originalFileName)}"`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+  res.setHeader('Cache-Control', 'private, no-store');
+  stream.pipe(res);
+}
 export const internshipProgress = async (req, res) => ok(res, await participant.participantProgress(req.user));
 export const internshipCertificate = async (req, res) => ok(res, await participant.participantCertificate(req.user));
 export const withdrawInternship = async (req, res) => ok(res, await participant.participantWithdraw(req.user, req.valid.body?.reason));

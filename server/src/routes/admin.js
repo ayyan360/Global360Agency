@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
 import { requirePermission } from '../middleware/auth.js';
+import { taskPdfUpload } from '../middleware/upload.js';
+import { uploadLimiter } from '../middleware/rateLimits.js';
 import * as S from '../validators/schemas.js';
 import { idParam, uuid, isoDate } from '../validators/common.js';
 import { paginationQuery } from '../utils/pagination.js';
@@ -79,6 +81,8 @@ r.post('/internship-enrollments/:id/evaluate', perm('certificates:manage'), v({ 
 
 // Tasks
 r.get('/internship-tasks', im, v({ query: S.taskListQuery }), A.listTasks);
+r.get('/internship-tasks/:id/attachment', im, v({ params: idParam }), A.downloadTaskAttachment);
+r.post('/internship-tasks/:id/attachment', im, uploadLimiter, v({ params: idParam }), taskPdfUpload, A.uploadTaskPdf);
 r.get('/internship-tasks/:id', im, v({ params: idParam }), A.getTask);
 r.patch('/internship-tasks/:id', im, v({ params: idParam, body: S.taskUpdateBody }), A.updateTask);
 r.post('/internship-tasks/:id/status', im, v({ params: idParam, body: S.taskStatusBody }), A.setTaskStatus);

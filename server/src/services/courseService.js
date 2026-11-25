@@ -13,9 +13,20 @@ import {
 import { notFound } from '../utils/errors.js';
 import { toLimitOffset, pageMeta, likeTerm } from '../utils/pagination.js';
 import { can } from '../utils/permissions.js';
+import { youtubeThumbnailUrl } from '../utils/youtube.js';
 
 /** SQL fragments for per-course aggregates, computed in the database (never invented). */
+export function firstLessonVideoAttribute(courseAlias = 'Course') {
+  return [
+    sequelize.literal(
+      `(SELECT l."videoUrl" FROM lessons l JOIN course_modules m ON m.id = l."moduleId" WHERE m."courseId" = "${courseAlias}"."id" AND l."videoUrl" IS NOT NULL ORDER BY m.position ASC, l.position ASC LIMIT 1)`
+    ),
+    'firstLessonVideoUrl',
+  ];
+}
+
 const STAT_ATTRS = [
+  firstLessonVideoAttribute(),
   [
     sequelize.literal(
       `(SELECT COUNT(*)::int FROM lessons l JOIN course_modules m ON m.id = l."moduleId" WHERE m."courseId" = "Course"."id")`
@@ -50,6 +61,7 @@ export function serializeCourseCard(course) {
     slug: c.slug,
     shortDescription: c.shortDescription,
     thumbnailUrl: c.thumbnailUrl,
+    lessonThumbnailUrl: youtubeThumbnailUrl(c.firstLessonVideoUrl),
     category: c.category,
     level: c.level,
     isFree: c.isFree,

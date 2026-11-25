@@ -166,6 +166,20 @@ export default function InternshipTaskDetailPage() {
                   <ul className="mt-2 space-y-1 text-sm">{task.resources.map((r) => <li key={r.url}><a href={r.url} target="_blank" rel="noopener noreferrer" className="link inline-flex items-center gap-1">{r.label} <ExternalLink className="size-3" /></a></li>)}</ul>
                 </section>
               )}
+              {task.attachment && (
+                <section>
+                  <h3 className="text-sm font-semibold">Task PDF</h3>
+                  <a
+                    href={apiUrl(`/student/internship/tasks/${task.id}/attachment`)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="link mt-2 inline-flex items-center gap-1 text-sm"
+                  >
+                    <Paperclip className="size-4" />
+                    {task.attachment.originalFileName} <span className="text-muted">({formatBytes(task.attachment.sizeBytes)})</span>
+                  </a>
+                </section>
+              )}
             </div>
           </Card>
 
