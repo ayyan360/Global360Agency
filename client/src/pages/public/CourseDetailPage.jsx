@@ -106,7 +106,7 @@ export default function CourseDetailPage() {
         <div className="container-page py-8 lg:py-10">
           <Breadcrumbs items={[{ to: '/', label: 'Home' }, { to: '/courses', label: 'Courses' }, { to: `/courses?category=${encodeURIComponent(course.category)}`, label: course.category }, { label: course.title }]} className="mb-5" />
           <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,420px)_1fr]">
-            <CourseThumbnail src={course.thumbnailUrl} title={course.title} category={course.category} rounded="rounded-[var(--radius-card)]" className="shadow-[var(--shadow-card)]" />
+            <CourseThumbnail src={course.thumbnailUrl} lessonThumbnailUrl={course.lessonThumbnailUrl} title={course.title} category={course.category} rounded="rounded-[var(--radius-card)]" className="shadow-[var(--shadow-card)]" />
             <div>
               {course.isSample && <Badge tone="outline" className="mb-3">Sample course</Badge>}
               <h1 className="text-3xl font-bold leading-tight sm:text-4xl">{course.title}</h1>

@@ -6,6 +6,7 @@ import {
   InternshipEnrollment,
   InternshipApplication,
   InternshipTask,
+  InternshipTaskAttachment,
   InternshipReviewerAssignment,
   User,
 } from '../../models/index.js';
@@ -15,6 +16,7 @@ import { toLimitOffset, pageMeta, likeTerm } from '../../utils/pagination.js';
 import { audit } from '../auditService.js';
 import { programPolicy } from './policy.js';
 import { programDays, isValidTimezone, totalWeeks, computeTaskTimes } from './scheduleService.js';
+import { removeStoredTaskPdfs } from './taskAttachmentService.js';
 
 const ACTIVE_ENROLLMENT = ['approved', 'in_progress', 'completed_qualified', 'completed_not_qualified'];
 
@@ -228,11 +230,14 @@ export async function deleteProgram(admin, id, { ip } = {}) {
   if (!program) throw notFound('Internship program not found.');
   const apps = await InternshipApplication.count({ where: { programId: id } });
   if (apps > 0) throw conflict('This program has applications. Archive it instead of deleting it.');
+  const taskIds = (await InternshipTask.findAll({ where: { programId: id }, attributes: ['id'] })).map((task) => task.id);
+  const attachments = taskIds.length ? await InternshipTaskAttachment.findAll({ where: { taskId: taskIds } }) : [];
   await sequelize.transaction(async (transaction) => {
     await InternshipTask.destroy({ where: { programId: id }, transaction });
     await program.destroy({ transaction });
     await audit({ actorId: admin.id, action: 'program.deleted', entityType: 'InternshipProgram', entityId: id, metadata: { title: program.title }, ip, transaction });
   });
+  await removeStoredTaskPdfs(attachments);
 }
 
 export async function addHoliday(admin, programId, { date, name }, { ip } = {}) {

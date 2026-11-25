@@ -21,6 +21,18 @@ const TIMEZONES = (() => {
 })();
 const toLocalInput = (iso) => (iso ? new Date(new Date(iso).getTime() - new Date(iso).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '');
 
+function getProgramDuration(startDate, endDate) {
+  if (!startDate || !endDate) return null;
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${endDate}T00:00:00Z`);
+  const days = Math.floor((end - start) / 86400000) + 1;
+  if (!Number.isFinite(days) || days < 1) return null;
+  return {
+    durationWeeks: Math.ceil(days / 7),
+    durationMonths: Math.max(1, Math.ceil(days / (365.2425 / 12))),
+  };
+}
+
 function ProgramForm({ program, onSaved }) {
   const toast = useToast();
   const [formError, setFormError] = useState(null);
@@ -66,6 +78,7 @@ function ProgramForm({ program, onSaved }) {
 
   const submit = async (v, confirmScheduleChange = false) => {
     setFormError(null);
+    const duration = getProgramDuration(v.startDate, v.endDate);
     const body = {
       title: v.title,
       slug: v.slug || undefined,
@@ -74,8 +87,8 @@ function ProgramForm({ program, onSaved }) {
       description: v.description,
       startDate: v.startDate,
       endDate: v.endDate,
-      durationMonths: Number(v.durationMonths),
-      durationWeeks: Number(v.durationWeeks),
+      durationMonths: duration?.durationMonths ?? Number(v.durationMonths),
+      durationWeeks: duration?.durationWeeks ?? Number(v.durationWeeks),
       applicationOpenAt: v.applicationOpenAt ? new Date(v.applicationOpenAt).toISOString() : null,
       applicationCloseAt: v.applicationCloseAt ? new Date(v.applicationCloseAt).toISOString() : null,
       capacity: v.capacity === '' ? null : Number(v.capacity),
@@ -111,6 +124,7 @@ function ProgramForm({ program, onSaved }) {
 
   const wd = watch('workingDays');
   const types = watch('allowedFileTypes');
+  const dateDuration = getProgramDuration(watch('startDate'), watch('endDate'));
 
   return (
     <form onSubmit={handleSubmit((v) => submit(v))} className="space-y-6" noValidate>
@@ -122,19 +136,32 @@ function ProgramForm({ program, onSaved }) {
           <Input label="Track" required placeholder="e.g. Web Development" hint="Use an existing track or type a new one." error={errors.track?.message} {...register('track')} />
           <Input label="Short description" required className="md:col-span-2" error={errors.shortDescription?.message} {...register('shortDescription')} />
           <Textarea label="Full description" required className="md:col-span-2" rows={5} error={errors.description?.message} {...register('description')} />
-          <Input label="URL slug" placeholder="auto-generated" error={errors.slug?.message} {...register('slug')} />
-          <Select label="Status" options={[{ value: 'draft', label: 'Draft (hidden)' }, { value: 'published', label: 'Published' }, { value: 'archived', label: 'Archived' }]} {...register('status')} />
+          <Input label="Start date" type="date" required error={errors.startDate?.message} {...register('startDate')} />
+          <Input label="End date" type="date" required error={errors.endDate?.message} {...register('endDate')} />
+          {dateDuration && (
+          <p className="text-sm text-muted md:col-span-2">
+              Duration is calculated from these dates: {dateDuration.durationWeeks} weeks (about {dateDuration.durationMonths} months).
+          </p>
+          )}
         </div>
       </Card>
 
+        <details open={Boolean(p)} className="space-y-6">
+          <summary className="cursor-pointer rounded-xl border border-line bg-white px-4 py-3 text-sm font-semibold">
+            Optional schedule, assessment and publishing settings
+          </summary>
+          <Card>
+            <SectionHeader title="Program settings" description="Slugs are generated automatically. New programs stay in draft until published." />
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input label="URL slug" placeholder="Auto-generated from title" hint="Leave empty to generate automatically." error={errors.slug?.message} {...register('slug')} />
+              <Select label="Status" options={[{ value: 'draft', label: 'Draft (hidden)' }, { value: 'published', label: 'Published' }, { value: 'archived', label: 'Archived' }]} {...register('status')} />
+            </div>
+          </Card>
+
       <Card>
-        <SectionHeader title="Dates & schedule" description="Task dates are generated from the actual program dates, working days, holidays and timezone." />
+          <SectionHeader title="Schedule" description="Task dates and program duration are calculated from the actual start and end dates." />
         <div className="grid gap-4 md:grid-cols-3">
-          <Input label="Start date" type="date" required error={errors.startDate?.message} {...register('startDate')} />
-          <Input label="End date" type="date" required error={errors.endDate?.message} {...register('endDate')} />
           <Select label="Timezone" error={errors.timezone?.message} {...register('timezone')}>{TIMEZONES.map((t) => <option key={t} value={t}>{t}</option>)}</Select>
-          <Input label="Duration (months)" type="number" min={1} {...register('durationMonths')} />
-          <Input label="Duration (weeks)" type="number" min={1} hint="Make a 12-week schedule explicit here." {...register('durationWeeks')} />
           <Input label="Capacity" type="number" min={1} placeholder="Unlimited" error={errors.capacity?.message} {...register('capacity')} />
           <Input label="Applications open" type="datetime-local" error={errors.applicationOpenAt?.message} {...register('applicationOpenAt')} />
           <Input label="Applications close" type="datetime-local" error={errors.applicationCloseAt?.message} {...register('applicationCloseAt')} />
@@ -193,6 +220,7 @@ function ProgramForm({ program, onSaved }) {
           <Textarea label="Weekly curriculum (one per line: week | title)" className="md:col-span-2" rows={5} {...register('weeklyCurriculum')} />
         </div>
       </Card>
+      </details>
       <div className="flex justify-end"><Button type="submit" size="lg" loading={isSubmitting}>{program ? 'Save program' : 'Create program'}</Button></div>
       <ConfirmDialog open={Boolean(needsConfirm)} onClose={() => setNeedsConfirm(null)} onConfirm={() => submit(needsConfirm.values, true)} tone="primary" title="Confirm schedule change" confirmLabel="Save anyway" message={needsConfirm?.message} />
     </form>

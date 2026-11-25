@@ -8,7 +8,8 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { Alert, Breadcrumbs, Button, ButtonLink, ErrorState, PageLoader, ProgressBar } from '../../components/common/ui.jsx';
 import { Logo } from '../../components/common/Logo.jsx';
-import { formatDuration, toEmbedUrl } from '../../utils/format.js';
+import { YouTubeLessonPlayer } from '../../components/courses/YouTubeLessonPlayer.jsx';
+import { formatDuration, getYouTubeVideoId, toEmbedUrl } from '../../utils/format.js';
 import NotFoundPage from '../errors/NotFoundPage.jsx';
 
 function CourseContent({ data, courseSlug, currentId, onNavigate }) {
@@ -97,6 +98,9 @@ export default function LessonPlayerPage() {
 
   const { lesson, navigation, viewer } = data;
   const embed = toEmbedUrl(lesson.videoUrl);
+  const videoId = getYouTubeVideoId(lesson.videoUrl);
+  const nextLesson = data.modules.flatMap((module) => module.lessons).find((item) => item.id === navigation.nextLessonId);
+  const nextLessonUrl = nextLesson && !nextLesson.isLocked ? `/learn/${courseSlug}/${nextLesson.id}` : null;
 
   const toggleComplete = async () => {
     setSaving(true);
@@ -142,7 +146,17 @@ export default function LessonPlayerPage() {
         <main id="main" className="min-w-0">
           <Breadcrumbs className="mb-4" items={[{ to: `/courses/${data.course.slug}`, label: data.course.title }, { label: lesson.moduleTitle }, { label: lesson.title }]} />
           <div className="overflow-hidden rounded-[var(--radius-card)] bg-[#17152B] shadow-[var(--shadow-card)]">
-            {embed ? (
+            {videoId ? (
+              <YouTubeLessonPlayer
+                videoId={videoId}
+                embedUrl={embed}
+                title={lesson.title}
+                courseUrl={`/courses/${data.course.slug}`}
+                nextLessonUrl={nextLessonUrl}
+                nextLessonTitle={nextLesson?.title}
+                nextLessonLocked={nextLesson?.isLocked}
+              />
+            ) : embed ? (
               <div className="aspect-video">
                 <iframe src={embed} title={lesson.title} className="size-full" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" loading="lazy" />
               </div>
@@ -184,7 +198,7 @@ export default function LessonPlayerPage() {
             {lesson.description && <div className="prose-g360 mt-5 border-t border-line pt-5">{lesson.description.split(/\n{2,}/).map((p, i) => <p key={i}>{p}</p>)}</div>}
             <div className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-5">
               {navigation.previousLessonId ? <ButtonLink to={`/learn/${courseSlug}/${navigation.previousLessonId}`} variant="outline" icon={ArrowLeft}>Previous</ButtonLink> : <span />}
-              {navigation.nextLessonId ? <ButtonLink to={`/learn/${courseSlug}/${navigation.nextLessonId}`} variant="secondary" iconRight={ArrowRight}>Next Lesson</ButtonLink> : <ButtonLink to={`/courses/${courseSlug}`} variant="secondary">Back to course</ButtonLink>}
+              {nextLessonUrl ? <ButtonLink to={nextLessonUrl} variant="secondary" iconRight={ArrowRight}>Next Lesson</ButtonLink> : nextLesson?.isLocked ? <ButtonLink to={`/courses/${courseSlug}`} variant="secondary">Enroll to continue</ButtonLink> : <ButtonLink to={`/courses/${courseSlug}`} variant="secondary">Back to course</ButtonLink>}
             </div>
           </div>
         </main>

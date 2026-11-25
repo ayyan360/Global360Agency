@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ProgressBar, StatusBadge, Input, Pagination } from '../components/common/ui.jsx';
 import { ResultsSummary, EligibilityChecklist } from '../components/internship/Results.jsx';
 import { FileUpload } from '../components/forms/FileUpload.jsx';
 import { CourseCard } from '../components/courses/CourseCard.jsx';
+import { CourseThumbnail } from '../components/courses/CourseThumbnail.jsx';
 import { BarChart } from '../components/dashboard/BarChart.jsx';
 
 const results = {
@@ -90,6 +91,21 @@ describe('UI components', () => {
     expect(screen.getByRole('link', { name: 'Web Basics' })).toHaveAttribute('href', '/courses/web-basics');
     expect(screen.getByText('No reviews yet')).toBeInTheDocument();
     expect(screen.getByText('Free')).toBeInTheDocument();
+  });
+
+  it('CourseThumbnail prefers the uploaded image, then falls back to the first lecture thumbnail', () => {
+    const { container } = render(
+      <CourseThumbnail
+        src="https://example.com/course-cover.jpg"
+        lessonThumbnailUrl="https://img.youtube.com/vi/PkZNo7MFNFg/hqdefault.jpg"
+        title="Web Basics"
+        category="Web Development"
+      />
+    );
+    const image = container.querySelector('img');
+    expect(image).toHaveAttribute('src', 'https://example.com/course-cover.jpg');
+    fireEvent.error(image);
+    expect(container.querySelector('img')).toHaveAttribute('src', 'https://img.youtube.com/vi/PkZNo7MFNFg/hqdefault.jpg');
   });
 
   it('Pagination calls back with the requested page', async () => {

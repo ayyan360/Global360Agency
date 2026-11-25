@@ -13,8 +13,9 @@ import {
   User,
 } from '../models/index.js';
 import { notFound, forbidden, conflict, badRequest, unauthorized } from '../utils/errors.js';
-import { canManageCourse, serializeCourseCard } from './courseService.js';
+import { canManageCourse, firstLessonVideoAttribute, serializeCourseCard } from './courseService.js';
 import { certificatePaymentSummary } from './certificatePaymentService.js';
+import { youtubeThumbnailUrl } from '../utils/youtube.js';
 
 /** Per-course lesson totals and completed counts for a user, straight from PostgreSQL. */
 export async function courseProgressFor(userId, courseIds) {
@@ -209,7 +210,21 @@ async function enrolledCourses(userId) {
       {
         model: Course,
         as: 'course',
-        attributes: ['id', 'title', 'slug', 'shortDescription', 'thumbnailUrl', 'category', 'level', 'isFree', 'isSample', 'status', 'curriculumLocked', 'certificateFee'],
+        attributes: [
+          'id',
+          'title',
+          'slug',
+          'shortDescription',
+          'thumbnailUrl',
+          'category',
+          'level',
+          'isFree',
+          'isSample',
+          'status',
+          'curriculumLocked',
+          'certificateFee',
+          firstLessonVideoAttribute('course'),
+        ],
         include: [{ model: User, as: 'instructor', attributes: ['id', 'name'] }],
       },
       { model: CourseCertificate, as: 'certificate', attributes: ['id', 'certificateNumber', 'recipientName', 'completionDate', 'issuedAt'] },
@@ -258,6 +273,7 @@ async function enrolledCourses(userId) {
         slug: e.course.slug,
         shortDescription: e.course.shortDescription,
         thumbnailUrl: e.course.thumbnailUrl,
+        lessonThumbnailUrl: youtubeThumbnailUrl(e.course.firstLessonVideoUrl),
         category: e.course.category,
         level: e.course.level,
         isSample: e.course.isSample,
@@ -348,7 +364,13 @@ export async function toggleWishlist(user, courseId) {
 export async function listWishlist(user) {
   const rows = await Wishlist.findAll({
     where: { userId: user.id },
-    include: [{ model: Course, as: 'course', where: { status: 'published' }, include: [{ model: User, as: 'instructor', attributes: ['id', 'name'] }] }],
+    include: [{
+      model: Course,
+      as: 'course',
+      where: { status: 'published' },
+      attributes: { include: [firstLessonVideoAttribute('course')] },
+      include: [{ model: User, as: 'instructor', attributes: ['id', 'name'] }],
+    }],
     order: [['createdAt', 'DESC']],
   });
   return rows.map((w) => serializeCourseCard(w.course));

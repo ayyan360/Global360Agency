@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toEmbedUrl, pct, formatDuration, formatBytes, initials } from '../utils/format.js';
+import { getYouTubeVideoId, toEmbedUrl, pct, formatDuration, formatBytes, initials } from '../utils/format.js';
 import { statusInfo } from '../constants/status.js';
 
 describe('format utilities', () => {
@@ -10,6 +10,12 @@ describe('format utilities', () => {
     expect(toEmbedUrl('javascript:alert(1)')).toBeNull();
     expect(toEmbedUrl('https://evil.example.com/video.mp4')).toBeNull();
     expect(toEmbedUrl(null)).toBeNull();
+  });
+
+  it('extracts valid YouTube video IDs from supported URL forms', () => {
+    expect(getYouTubeVideoId('https://www.youtube.com/watch?v=PkZNo7MFNFg')).toBe('PkZNo7MFNFg');
+    expect(getYouTubeVideoId('https://youtu.be/PkZNo7MFNFg')).toBe('PkZNo7MFNFg');
+    expect(getYouTubeVideoId('https://evil.example.com/watch?v=PkZNo7MFNFg')).toBeNull();
   });
 
   it('formats percentages, durations and sizes', () => {

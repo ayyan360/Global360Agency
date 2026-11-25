@@ -14,6 +14,7 @@ export class InternshipApplication extends Model {
 export class InternshipEnrollment extends Model {}
 export class InternshipReviewerAssignment extends Model {}
 export class InternshipTask extends Model {}
+export class InternshipTaskAttachment extends Model {}
 export class TaskSubmission extends Model {}
 export class SubmissionAttachment extends Model {}
 export class TaskAssessment extends Model {}
@@ -162,6 +163,24 @@ export function initInternshipModels(sequelize) {
       createdBy: DataTypes.UUID,
     },
     { sequelize, modelName: 'InternshipTask', tableName: 'internship_tasks' }
+  );
+
+  InternshipTaskAttachment.init(
+    {
+      id: uuidPk,
+      taskId: { type: DataTypes.UUID, allowNull: false, unique: true },
+      storageKey: { type: DataTypes.STRING(300), allowNull: false, unique: true },
+      originalFileName: { type: DataTypes.STRING(255), allowNull: false },
+      mimeType: { type: DataTypes.STRING(120), allowNull: false },
+      sizeBytes: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+        get() {
+          return Number(this.getDataValue('sizeBytes'));
+        },
+      },
+    },
+    { sequelize, modelName: 'InternshipTaskAttachment', tableName: 'internship_task_attachments' }
   );
 
   TaskSubmission.init(

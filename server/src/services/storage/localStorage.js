@@ -4,7 +4,7 @@ import path from 'node:path';
 import { SERVER_ROOT } from '../../config/env.js';
 
 /**
- * Local private storage for development. Files live outside any static/public directory and are only
+ * Local private storage. Files live outside any static/public directory and are only
  * served through authorized API endpoints. Keys are validated to prevent path traversal.
  */
 export function createLocalStorage(dir) {

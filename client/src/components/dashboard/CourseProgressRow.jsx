@@ -9,7 +9,7 @@ export function CourseProgressRow({ item, showMeta = false, onDownloadCertificat
   return (
     <li className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center">
       <Link to={`/courses/${item.course.slug}`} className="w-full shrink-0 sm:w-28">
-        <CourseThumbnail src={item.course.thumbnailUrl} title={item.course.title} category={item.course.category} rounded="rounded-lg" />
+        <CourseThumbnail src={item.course.thumbnailUrl} lessonThumbnailUrl={item.course.lessonThumbnailUrl} title={item.course.title} category={item.course.category} rounded="rounded-lg" />
       </Link>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">

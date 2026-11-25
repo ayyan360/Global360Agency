@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { resetDatabase, createUser, agentFor, createProgram, createTask, enroll, closeDb } from './helpers.js';
-import { Notification, InternshipTask, AuditLog } from '../src/models/index.js';
+import { resetDatabase, createUser, agentFor, createProgram, createTask, enroll, closeDb, PDF_BYTES } from './helpers.js';
+import { Notification, InternshipTask, InternshipTaskAttachment, AuditLog } from '../src/models/index.js';
 import { runAllJobs } from '../src/jobs/index.js';
 
 describe('Admin task scheduling API and background jobs', () => {
@@ -50,6 +50,39 @@ describe('Admin task scheduling API and background jobs', () => {
     assert.equal(withReason.status, 200);
     const log = await AuditLog.findOne({ where: { action: 'task.updated', entityId: released.id } });
     assert.equal(log.metadata.reason, 'Mentor unavailable on the original day');
+  });
+
+  it('lets admins attach a PDF task brief and restricts downloads to enrolled participants', async () => {
+    const task = await createTask(program, { availableAt: new Date(Date.now() - 86400000) });
+    const invalid = await admin
+      .post(`/api/admin/internship-tasks/${task.id}/attachment`)
+      .attach('file', Buffer.from('not a PDF'), { filename: 'brief.pdf', contentType: 'application/pdf' });
+    assert.equal(invalid.status, 422);
+
+    const uploaded = await admin
+      .post(`/api/admin/internship-tasks/${task.id}/attachment`)
+      .attach('file', PDF_BYTES, { filename: 'task-brief.pdf', contentType: 'application/pdf' });
+    assert.equal(uploaded.status, 201, JSON.stringify(uploaded.body));
+    assert.equal(uploaded.body.data.originalFileName, 'task-brief.pdf');
+    const attachment = await InternshipTaskAttachment.findOne({ where: { taskId: task.id } });
+    assert.ok(attachment);
+    assert.ok(!attachment.storageKey.includes('task-brief.pdf'));
+
+    const student = await createUser('student');
+    await enroll(student, program);
+    const participant = await agentFor(student);
+    const detail = await participant.get(`/api/student/internship/tasks/${task.id}`);
+    assert.equal(detail.body.data.task.attachment.originalFileName, 'task-brief.pdf');
+    const download = await participant.get(`/api/student/internship/tasks/${task.id}/attachment`);
+    assert.equal(download.status, 200);
+    assert.equal(download.headers['content-type'], 'application/pdf');
+    assert.match(download.headers['content-disposition'], /^inline/);
+
+    const outsider = await agentFor(await createUser('student'));
+    assert.equal((await outsider.get(`/api/student/internship/tasks/${task.id}/attachment`)).status, 404);
+    assert.equal((await admin.get(`/api/admin/internship-tasks/${task.id}/attachment`)).status, 200);
+    assert.equal((await admin.delete(`/api/admin/internship-tasks/${task.id}`)).status, 204);
+    assert.equal(await InternshipTaskAttachment.count({ where: { taskId: task.id } }), 0);
   });
 
   it('refuses to delete tasks that have submissions', async () => {

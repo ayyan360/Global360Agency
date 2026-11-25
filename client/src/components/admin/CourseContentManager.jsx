@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Eye, Lock, Pencil, Plus, Trash2, Video } from 'lucide-react';
 import { api } from '../../services/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { Alert, Badge, Button, Checkbox, EmptyState, Input, Textarea } from '../common/ui.jsx';
 import { Modal, ConfirmDialog } from '../common/Modal.jsx';
-import { formatDuration } from '../../utils/format.js';
+import { formatDuration, getYouTubeVideoId } from '../../utils/format.js';
+import { fetchYouTubeVideoDuration } from '../../services/youtubeIframeApi.js';
 
 function ModuleModal({ open, onClose, courseId, module, onSaved }) {
   const toast = useToast();
@@ -43,17 +44,58 @@ function LessonModal({ open, onClose, moduleId, lesson, modules, onSaved }) {
     title: lesson?.title || '',
     description: lesson?.description || '',
     videoUrl: lesson?.videoUrl || '',
-    minutes: lesson ? Math.round(lesson.durationSeconds / 60) : 10,
+    minutes: lesson ? (lesson.durationSeconds / 60).toFixed(2) : '',
     isPreview: lesson?.isPreview || false,
     moduleId: lesson?.moduleId || moduleId,
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+  const [durationStatus, setDurationStatus] = useState(null);
+  const manualDuration = useRef(false);
+  const set = (k) => (e) => {
+    if (k === 'videoUrl') manualDuration.current = false;
+    if (k === 'minutes') {
+      manualDuration.current = true;
+      setDurationStatus('manual');
+    }
+    setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+  };
+
+  useEffect(() => {
+    if (!getYouTubeVideoId(form.videoUrl)) {
+      setDurationStatus(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setDurationStatus('loading');
+    const timer = setTimeout(async () => {
+      try {
+        const durationSeconds = await fetchYouTubeVideoDuration(form.videoUrl);
+        if (cancelled || manualDuration.current) return;
+        if (durationSeconds) {
+          setForm((f) => ({ ...f, minutes: (durationSeconds / 60).toFixed(2) }));
+          setDurationStatus('detected');
+        } else {
+          setDurationStatus('unavailable');
+        }
+      } catch (err) {
+        if (cancelled || manualDuration.current) return;
+        console.error('Could not read the YouTube lesson duration.', err);
+        setDurationStatus('unavailable');
+      }
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [form.videoUrl]);
+
   const save = async () => {
     setSaving(true);
     setErrors({});
-    const body = { title: form.title, description: form.description, videoUrl: form.videoUrl || null, durationSeconds: Math.max(0, Number(form.minutes) || 0) * 60, isPreview: form.isPreview };
+    const body = { title: form.title, description: form.description, videoUrl: form.videoUrl || null, durationSeconds: Math.max(0, Math.round((Number(form.minutes) || 0) * 60)), isPreview: form.isPreview };
     try {
       if (lesson) await api.patch(`/admin/lessons/${lesson.id}`, { ...body, moduleId: form.moduleId });
       else await api.post(`/admin/modules/${moduleId}/lessons`, body);
@@ -72,7 +114,21 @@ function LessonModal({ open, onClose, moduleId, lesson, modules, onSaved }) {
         {errors.form && <p className="text-sm text-danger sm:col-span-2" role="alert">{errors.form}</p>}
         <Input label="Lesson title" required className="sm:col-span-2" value={form.title} onChange={set('title')} error={errors.title} />
         <Input label="Video URL (YouTube or Vimeo)" placeholder="https://www.youtube.com/watch?v=…" value={form.videoUrl} onChange={set('videoUrl')} error={errors.videoUrl} hint="Videos are embedded from the provider; they are not downloaded or rehosted." />
-        <Input label="Duration (minutes)" type="number" min={0} value={form.minutes} onChange={set('minutes')} error={errors.durationSeconds} />
+        <Input
+          label="Duration (minutes)"
+          type="number"
+          min={0}
+          step={0.01}
+          value={form.minutes}
+          onChange={set('minutes')}
+          error={errors.durationSeconds}
+          hint={
+            durationStatus === 'loading' ? 'Detecting duration from YouTube…'
+              : durationStatus === 'detected' ? 'Detected from the video. You can still adjust it.'
+                : durationStatus === 'unavailable' ? 'Could not detect it; enter the duration manually.'
+                  : 'YouTube videos fill this automatically; other video links can be entered manually.'
+          }
+        />
         {lesson && modules?.length > 1 && (
           <label className="space-y-1.5 text-[13px] font-medium sm:col-span-2">
             Module
